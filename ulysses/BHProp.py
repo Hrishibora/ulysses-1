@@ -787,14 +787,14 @@ def ItauRH_SR(tl, v, M1, M2, M3, Mphi): # Including 3 RH neutrinos + scalar
 
     # Evaporation functions for Black Hole mass and spin
     
-    FSM  = fSM(M, ast)  + gg * phi_g(M, ast, 0.)# SM + gravitons Evaporation contribution
+    FSM  = fSM(M, ast) + gg * phi_g(M, ast, 0.) # SM + gravitons Evaporation contribution
     FRH1 = fRH(M, ast, M1)                      # 1 RH neutrino  Evaporation contribution
     FRH2 = fRH(M, ast, M2)                      # 2 RH neutrino  Evaporation contribution
     FRH3 = fRH(M, ast, M3)                      # 3 RH neutrino  Evaporation contribution
     Fphi = fDM(M, ast, Mphi, 0)                 # Scalar contribution
     FT   = FSM + FRH1 + FRH2 + FRH3 + Fphi      # Total Evaporation contribution
 
-    GSM  = gSM(M, ast)  + gg * gam_g(M, ast, 0.)# SM + gravitons  Evaporation contribution
+    GSM  = gSM(M, ast) + gg * gam_g(M, ast, 0.) # SM + gravitons  Evaporation contribution
     GRH1 = gRH(M, ast, M1)                      # 1 RH neutrino  Evaporation contribution
     GRH2 = gRH(M, ast, M2)                      # 2 RH neutrino  Evaporation contribution
     GRH3 = gRH(M, ast, M3)                      # 3 RH neutrino  Evaporation contribution
