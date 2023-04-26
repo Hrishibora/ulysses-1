@@ -462,7 +462,19 @@ def fRH(M, ast, mrh): return gnu * phi_f(M, ast, mrh)
 
 # DM contribution
 
-def fDM(M, ast, mdm): return gnu * phi_f(M, ast, mdm)
+def fDM(M, ast, mdm, s):
+    
+    if s == 0.:
+        f = phi_s(M, ast, mdm)
+    elif s == 0.5:
+        f = 2.*phi_f(M, ast, mdm) # Assuming Majorana DM
+    elif s == 1.:
+        f = 3.*phi_v(M, ast, mdm)
+    elif s == 2.:
+        f = 5.*phi_g(M, ast, mdm)
+        
+    return f
+
 def fX(M, ast, mX):   return 3. * phi_v(M, ast, mX)
 
 # Dark Radiation
@@ -639,9 +651,22 @@ def gSM(M, ast):
 
 def gRH(M, ast, mRH): return gnu * gam_f(M, ast, mRH)
 
-# Mediator contribution
+# Dark Matter contribution
 
-def gDM(M, ast, mdm): return gnu * gam_f(M, ast, mdm)
+def gDM(M, ast, mdm, s):
+
+    if s == 0.:
+        f = gam_s(M, ast, mdm)
+    elif s == 0.5:
+        f = 2.*gam_f(M, ast, mdm) # Assuming Majorana DM
+    elif s == 1.:
+        f = 3.*gam_v(M, ast, mdm)
+    elif s == 2.:
+        f = 5.*gam_g(M, ast, mdm)
+        
+    return f
+
+# Mediator contribution
 
 def gX(M, ast, mX): return 3. * gam_v(M, ast, mX)
 
@@ -755,6 +780,32 @@ def ItauRH(tl, v, M1, M2, M3): # Including 3 RH neutrinos
 
     return [dMdtl, dastdtl]
 
+def ItauRH_SR(tl, v, M1, M2, M3, Mphi): # Including 3 RH neutrinos + scalar
+    
+    M   = v[0]
+    ast = v[1]
+
+    # Evaporation functions for Black Hole mass and spin
+    
+    FSM  = fSM(M, ast)  + gg * phi_g(M, ast, 0.)# SM + gravitons Evaporation contribution
+    FRH1 = fRH(M, ast, M1)                      # 1 RH neutrino  Evaporation contribution
+    FRH2 = fRH(M, ast, M2)                      # 2 RH neutrino  Evaporation contribution
+    FRH3 = fRH(M, ast, M3)                      # 3 RH neutrino  Evaporation contribution
+    Fphi = fDM(M, ast, Mphi, 0)                 # Scalar contribution
+    FT   = FSM + FRH1 + FRH2 + FRH3 + Fphi      # Total Evaporation contribution
+
+    GSM  = gSM(M, ast)  + gg * gam_g(M, ast, 0.)# SM + gravitons  Evaporation contribution
+    GRH1 = gRH(M, ast, M1)                      # 1 RH neutrino  Evaporation contribution
+    GRH2 = gRH(M, ast, M2)                      # 2 RH neutrino  Evaporation contribution
+    GRH3 = gRH(M, ast, M3)                      # 3 RH neutrino  Evaporation contribution
+    Gphi = gDM(M, ast, Mphi, 0)                 # Scalar contribution
+    GT   = GSM + GRH1 + GRH2 + GRH3 + Gphi      # Total Evaporation contribution
+
+    dMdtl   = - log(10.) * 10.**tl * kappa * FT * M**-2
+    dastdtl = - log(10.) * 10.**tl * ast * kappa * M**-3 * (GT - 2.*FT)
+
+    return [dMdtl, dastdtl]
+
 # Determining the scale fator where PBHs evaporate
 
 def afin(aexp, rPBHi, rRadi, t, ail):
@@ -777,10 +828,10 @@ def afin(aexp, rPBHi, rRadi, t, ail):
 import os
 data_dir = os.path.dirname(ulysses.__file__)
 
-fg  = os.path.join(data_dir, "etab1BE1Fscalefactor_gstar.txt")
-fgS = os.path.join(data_dir, "etab1BE1Fscalefactor_gstarS.txt")
+file_g  = os.path.join(data_dir, "./data/gstar.txt")
+file_gS = os.path.join(data_dir, "./data/gstarS.txt")
 
-gTab = np.loadtxt(fg, skiprows=0)
+gTab = np.loadtxt(file_g, skiprows=0)
 
 Ttab = gTab[:,0]
 gtab = gTab[:,1]
@@ -790,7 +841,7 @@ def gstar(T): return interpolate.splev(T, tck, der=0)
 
 def dgstardT(T): return interpolate.splev(T, tck, der = 1)
 
-gSTab = np.loadtxt(fgS, skiprows=0)
+gSTab = np.loadtxt(file_gS, skiprows=0)
 
 TStab = gSTab[:,0]
 gstab = gSTab[:,1]
