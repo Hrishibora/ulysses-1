@@ -101,10 +101,14 @@ def FBEqs(x, v, ngam, M1, M2, M3, Mphi, eps, d1, w1, N1Req, dPBH1_prim, dPBH1_se
     #       RH neutrinos and Scalar          #
     #----------------------------------------#
 
-    NTH1  = (N1RT - N1Req) * d1/H
-    NBH1p = N1RBp * dPBH1_prim/H  # dPBH_prim corresponds to the direct emission from the PBH 
-    NBH1s = N1RBs * dPBH1_sec/H   # dPBH_sec is from the decay of scalars produced by the evaporation
-    NSR1  = N1RS * dSR1/H
+    d1t = min([d1, 1.e4*H])
+    dPBH1_primt = min([dPBH1_prim, 1.e4*H])
+    dPBH1_sect  = min([dPBH1_sec, 1.e4*H])
+    dSR1t  = min([dSR1, 1.e4*H])
+    NTH1  = (N1RT - N1Req) * d1t/H
+    NBH1p = N1RBp * dPBH1_primt/H  # dPBH_prim corresponds to the direct emission from the PBH 
+    NBH1s = N1RBs * dPBH1_sect/H   # dPBH_sec is from the decay of scalars produced by the evaporation
+    NSR1  = N1RS * dSR1t/H
 
     dN1RTdx  = -NTH1                                                  # Thermal contribution
     dN1RBpdx = -NBH1p + (bh.Gamma_F(M, ast, M1)/H)*(nPBH/ngam)        # Primary PBH-induced contribution, normalized wrt the initial photon density ngam
@@ -178,7 +182,7 @@ def FBEqs_aBE(x, v, ngam, M1,M2,M3, Mphi, eps, d1, w1, N1Req, nPBHi, dPBH1_prim,
     dN1RSdx  = -NSR1 + 2*(Gphi/H)*NphiS *(nPBHi/ngam)     # RH neutrinos from scalar decay  
 
     dNphiSdx = - Gphi*NphiS/H       # Scalar decay into RHNs
-    #print(x, NphiS)
+
     #----------------------------------------#
     #            Lepton asymmetries          #
     #----------------------------------------#
@@ -223,7 +227,7 @@ class EtaB_PBH_SR(ulysses.ULSBase):
         self.g     = None # Coupling g
 
         self.pnames = ['m',  'M1', 'M2', 'M3', 'delta', 'a21', 'a31', 'x1', 'x2', 'x3', 'y1', 'y2', 'y3',
-                       't12', 't13', 't23', 'MPBHi', 'aPBHi', 'bPBHi', 'alphi', 'g']
+                       't12', 't13', 't23', 'MPBHi', 'aPBHi', 'bPBHi', 'alphi', 'log_g']
 
         #------------------------------------------------------------#
         #            Inverse Time dilatation factor <M/E>            #
@@ -281,7 +285,7 @@ class EtaB_PBH_SR(ulysses.ULSBase):
         self.aPBHi = pdict["aPBHi"]
         self.bPBHi = pdict["bPBHi"]
         self.alphi = pdict["alphi"]
-        self.g     = pdict["g"]
+        self.log_g = pdict["log_g"]
 
     def ME(self,zBH):
 
@@ -468,26 +472,22 @@ class EtaB_PBH_SR(ulysses.ULSBase):
     @property
     def EtaB(self):
         
-        #Define fixed quantities for BEs
-        eps1tt = np.real(self.epsilon1ab(2,2))
-        eps1mm = np.real(self.epsilon1ab(1,1))
-        eps1ee = np.real(self.epsilon1ab(0,0))
-        eps1tm =         self.epsilon1ab(2,1)
-        eps1te =         self.epsilon1ab(2,0)
-        eps1me =         self.epsilon1ab(1,0)
-
-        eps = [eps1tt, eps1mm, eps1ee, eps1tm, eps1te, eps1me] # Array for CP violation elements
-        
         Mi    = 10**(self.MPBHi) # PBH initial Mass in grams
         asi   = self.aPBHi       # PBH initial rotation a_star factor
         bi    = 10**(self.bPBHi) # Reduced Initial PBH fraction, beta^prime
 
-        g     = self.g                               # coupling between scalar and RHNs
-        Mphi  = self.alphi/(bh.GCF * Mi/bh.GeV_in_g) # Scalar mass, fixed from the gravitational coupling alpha = G * MPBH * Mphi
+        g     = 10.**self.log_g                      # coupling between scalar and RHNs
+        
+        #Mphi  = self.alphi/(bh.GCF * Mi/bh.GeV_in_g) # Scalar mass, fixed from the gravitational coupling alpha = G * MPBH * Mphi
+        #self.M1 = (1. - 0.025)*0.5*Mphi
+        Mphi = 2.*self.M1/(1. - 0.025)
+        
+        self.M2 = 10.*self.M1
+        self.M3 = 100.*self.M1
 
-        self.M1 = (1 - .05)*0.5*Mphi
+        #print(self.M1, self.M2, self.M3)
 
-        print("{0:6E}".format(Mphi), g, "{0:6E}".format(self.M1))
+        #print("{0:6E}".format(Mphi), g, "{0:6E}".format(self.M1), "{0:6E}".format(bh.GCF * Mi/bh.GeV_in_g * Mphi))
 
         assert 0. <= asi and asi < 1., colored('initial spin factor a* is not in the range [0., 1.)', 'red')
         assert bi < np.sqrt(bh.gamma), colored('initial PBH density is larger than the total Universe\'s budget', 'red')
@@ -505,6 +505,16 @@ class EtaB_PBH_SR(ulysses.ULSBase):
         N1RSi  = 0.      # Initial condition for Superradiance-emitted RH neutrino number
         NphiSi = 1.e-10  # Initial condition for scalar Superradiance, needs to be larger than 0
         NBLi   = 0.      # Initial condition for B-L asymmetry
+
+        #Define fixed quantities for BEs
+        eps1tt = np.real(self.epsilon1ab(2,2))
+        eps1mm = np.real(self.epsilon1ab(1,1))
+        eps1ee = np.real(self.epsilon1ab(0,0))
+        eps1tm =         self.epsilon1ab(2,1)
+        eps1te =         self.epsilon1ab(2,0)
+        eps1me =         self.epsilon1ab(1,0)
+
+        eps = [eps1tt, eps1mm, eps1ee, eps1tm, eps1te, eps1me] # Array for CP violation elements
         
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
         #                                           Solving the equations                                                   #
