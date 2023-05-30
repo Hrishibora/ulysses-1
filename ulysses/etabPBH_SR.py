@@ -28,7 +28,7 @@ from termcolor import colored
 #   Equations before evaporation   #
 #----------------------------------#
 
-def FBEqs(x, v, ngam, M1, M2, M3, Mphi, eps, d1, w1, N1Req, dPBH1_prim, dPBH1_sec, dSR1, WashDL2, xilog10, GSR, Gphi):
+def FBEqs(x, v, ngam, M1, M2, M3, Mphi, eps, d1, w1, N1Req, dPBH1_prim, dPBH1_sec, dSR1, WashDL2, xilog10, GSR, Gphi, Grad):
 
     M     = v[0] # PBH mass in g
     ast   = v[1] # PBH angular momentum
@@ -41,7 +41,7 @@ def FBEqs(x, v, ngam, M1, M2, M3, Mphi, eps, d1, w1, N1Req, dPBH1_prim, dPBH1_se
     N1RBs = v[7] # nu_R number density from PBH evaporation -- secondary
     N1RS  = v[8] # nu_R number density from Superradiance
 
-    NphiS = v[9] # Scalar number of particles from Superradiance
+    NphiS = v[9] # Scalar number of particles from Superradiance per BH
     
     NBL   = v[10] # single Flavor B-L asymmetry
 
@@ -83,17 +83,17 @@ def FBEqs(x, v, ngam, M1, M2, M3, Mphi, eps, d1, w1, N1Req, dPBH1_prim, dPBH1_se
     #    Radiation + PBH + Temperature equations   #
     #----------------------------------------------#
 
-    alpha = bh.GCF * M_GeV * Mphi             # Gravitational coupling between scalar and PBH
+    alpha = bh.GCF * M_GeV * Mphi                # Gravitational coupling between scalar and PBH
 
     # Black Hole Evolution
-    dMrad_GeVdx = - FT/(bh.GCF**2 * M_GeV**2)/H                   # Only Hawking production -> Contribution to the SM radiation density
+    dMrad_GeVdx = - FT/(bh.GCF**2 * M_GeV**2)/H  # Only Hawking production -> Contribution to the SM radiation density
 
     dM_GeVdx    = (- FT/(bh.GCF**2 * M_GeV**2) - Mphi*GSR*NphiS)/H  
     dastdx      = (- ast * (GT - 2.*FT)/(bh.GCF**2 * M_GeV**3)
                    - 8.*np.pi*(np.sqrt(2.) - 2.*alpha*ast)*(MPL_r/M_GeV)**2*GSR*NphiS)/H
     
     # Universe Evolution
-    drRADdx  = - (FSM/FT) * (dMrad_GeVdx/M_GeV) * a * rPBH
+    drRADdx  = - (FSM/FT) * (dMrad_GeVdx/M_GeV) * a * rPBH + (Grad/H)*(Mphi*NphiS)*(nPBH/ngam) # Additional term includes scalar decay into SM radiation
     drPBHdx  = + (dM_GeVdx/M_GeV) * rPBH
     dTdx     = - (Tp/Del) * (1.0 - (bh.gstarS(Tp)/bh.gstar(Tp))*(drRADdx/(4.*rRAD)))
 
@@ -113,7 +113,7 @@ def FBEqs(x, v, ngam, M1, M2, M3, Mphi, eps, d1, w1, N1Req, dPBH1_prim, dPBH1_se
     dN1RTdx  = -NTH1                                                  # Thermal contribution
     dN1RBpdx = -NBH1p + (bh.Gamma_F(M, ast, M1)/H)*(nPBH/ngam)        # Primary PBH-induced contribution, normalized wrt the initial photon density ngam
     dN1RBsdx = -NBH1s + (2*bh.Gamma_S(M, ast, Mphi)/H)*(nPBH/ngam)    # Secondary PBH-induced contribution, normalized wrt the initial photon density ngam
-    dN1RSdx  = -NSR1  + 2*(Gphi/H)*NphiS*(nPBH/ngam)                  # RH neutrinos from scalar decay  from SR
+    dN1RSdx  = -NSR1  + 2*(Gphi/H)*NphiS*(nPBH/ngam)               # RH neutrinos from scalar decay  from SR
 
     dNphiSdx = (GSR - Gphi)*NphiS/H                                   # Scalar number of particles per PBH produced from Superradiance
 
@@ -135,7 +135,7 @@ def FBEqs(x, v, ngam, M1, M2, M3, Mphi, eps, d1, w1, N1Req, dPBH1_prim, dPBH1_se
 #    Equations after evaporation   #
 #----------------------------------#
 
-def FBEqs_aBE(x, v, ngam, M1,M2,M3, Mphi, eps, d1, w1, N1Req, nPBHi, dPBH1_prim, dPBH1_sec, dSR1, WashDL2, Gphi):
+def FBEqs_aBE(x, v, ngam, M1,M2,M3, Mphi, eps, d1, w1, N1Req, nPBHi, dPBH1_prim, dPBH1_sec, dSR1, WashDL2, Gphi, Grad):
 
     rRAD  = v[0] # Radiation energy density
     Tp    = v[1] # Plasma Temperature
@@ -164,7 +164,7 @@ def FBEqs_aBE(x, v, ngam, M1,M2,M3, Mphi, eps, d1, w1, N1Req, nPBHi, dPBH1_prim,
     #    Radiation + Temperature equations   #
     #----------------------------------------#
     
-    drRADdx = 0.
+    drRADdx = + (Grad/H)*(Mphi*NphiS)*(nPBHi/ngam) # Term includes scalar decay into SM radiation
     dTdx    = - Tp/Del
 
     #----------------------------------------#
@@ -179,7 +179,7 @@ def FBEqs_aBE(x, v, ngam, M1,M2,M3, Mphi, eps, d1, w1, N1Req, nPBHi, dPBH1_prim,
     dN1RTdx  = -NTH1                     # Thermal contribution
     dN1RBpdx = -NBH1p                    # Primary PBH-induced contribution, normalized wrt the initial photon density ngam
     dN1RBsdx = -NBH1s                    # Secondary PBH-induced contribution, normalized wrt the initial photon density ngam
-    dN1RSdx  = -NSR1 + 2*(Gphi/H)*NphiS *(nPBHi/ngam)     # RH neutrinos from scalar decay  
+    dN1RSdx  = -NSR1 + 2*(Gphi/H)*NphiS*(nPBHi/ngam)     # RH neutrinos from scalar decay  
 
     dNphiSdx = - Gphi*NphiS/H       # Scalar decay into RHNs
 
@@ -225,9 +225,10 @@ class EtaB_PBH_SR(ulysses.ULSBase):
         self.bPBHi = None # Log10[beta']
         self.alphi = None # Alpha = G * MPBH * Mphi
         self.g     = None # Coupling g
+        self.BR    = None # Branching ratio of phi -> NN
 
         self.pnames = ['m',  'M1', 'M2', 'M3', 'delta', 'a21', 'a31', 'x1', 'x2', 'x3', 'y1', 'y2', 'y3',
-                       't12', 't13', 't23', 'MPBHi', 'aPBHi', 'bPBHi', 'alphi', 'log_g']
+                       't12', 't13', 't23', 'MPBHi', 'aPBHi', 'bPBHi', 'alphi', 'log_g', 'BR']
 
         #------------------------------------------------------------#
         #            Inverse Time dilatation factor <M/E>            #
@@ -286,6 +287,7 @@ class EtaB_PBH_SR(ulysses.ULSBase):
         self.bPBHi = pdict["bPBHi"]
         self.alphi = pdict["alphi"]
         self.log_g = pdict["log_g"]
+        self.BR    = pdict["BR"]
 
     def ME(self,zBH):
 
@@ -373,7 +375,7 @@ class EtaB_PBH_SR(ulysses.ULSBase):
     #********************************************************#
     #        Equations Before  PBH evaporation               #
     #********************************************************#
-    def RHS(self, x, y0, eps, ngam, xilog10, Mphi, g, fG_SR): # x is the Log10 of the scale factor
+    def RHS(self, x, y0, eps, ngam, xilog10, Mphi, g, fG_SR, BR): # x is the Log10 of the scale factor
 
         MBH  = y0[0]
         ast  = y0[1]
@@ -392,7 +394,8 @@ class EtaB_PBH_SR(ulysses.ULSBase):
 
         self._dSR1  = self.Gamma1 * (2.*self.M1/Mphi)                 # Boosted scalar decay width into RHNs from the Superradiant cloud, assuming phi decaying at rest
 
-        Gam_phi     = self.Gphi(Mphi, self.M1, g)
+        Gam_phi     = BR*self.Gphi(Mphi, self.M1, g)
+        Gam_rad     = (1. - BR)*self.Gphi(Mphi, 0., g)
 
         self._w1    = self._d1 * (my_kn2(z) * z**2/(3. * zeta(3.)))
         
@@ -418,12 +421,12 @@ class EtaB_PBH_SR(ulysses.ULSBase):
             
         return FBEqs(x, y0, ngam, self.M1, self.M2, self.M3, Mphi, eps,
                      self._d1, self._w1, self._n1eq,
-                     self._dPBH1_prim, self._dPBH1_sec, self._dSR1, np.real(WashDL2), xilog10, Gam_SR, Gam_phi)
+                     self._dPBH1_prim, self._dPBH1_sec, self._dSR1, np.real(WashDL2), xilog10, Gam_SR, Gam_phi, Gam_rad)
 
     #******************************************************#
     #        Equations After PBH evaporation               #
     #******************************************************#
-    def RHS_aBE(self, x, y0, eps, ngam, nPBHi, MBHi, asi, Mphi, g):
+    def RHS_aBE(self, x, y0, eps, ngam, nPBHi, MBHi, asi, Mphi, g, BR):
         
         Tp   = y0[1]             # Plasma Temperature
         TBH  = bh.TBH(MBHi, asi) # BH final temperature
@@ -441,7 +444,8 @@ class EtaB_PBH_SR(ulysses.ULSBase):
 
         self._dSR1  = self.Gamma1 * (2.*self.M1/Mphi)                 # Boosted scalar decay width into RHNs from the Superradiant cloud, assuming phi decaying at rest
 
-        Gam_phi     = self.Gphi(Mphi, self.M1, g)
+        Gam_phi     = BR*self.Gphi(Mphi, self.M1, g)
+        Gam_rad     = (1. - BR)*self.Gphi(Mphi, 0., g)
         
         self._w1    = self._d1 * (my_kn2(z) * z**2/(3. * zeta(3.)))
 
@@ -463,7 +467,7 @@ class EtaB_PBH_SR(ulysses.ULSBase):
         WashDL2 = gD2/nleq
 
         return FBEqs_aBE(x, y0, ngam, self.M1,self.M2,self.M3, Mphi, eps, self._d1, self._w1, self._n1eq,
-                        nPBHi,  self._dPBH1_prim, self._dPBH1_sec, self._dSR1, np.real(WashDL2), Gam_phi)
+                         nPBHi,  self._dPBH1_prim, self._dPBH1_sec, self._dSR1, np.real(WashDL2), Gam_phi, Gam_rad)
 
     #******************************************************#
     #                     Main Program                     #
@@ -477,10 +481,12 @@ class EtaB_PBH_SR(ulysses.ULSBase):
         bi    = 10**(self.bPBHi) # Reduced Initial PBH fraction, beta^prime
 
         g     = 10.**self.log_g                      # coupling between scalar and RHNs
+
+        BR    = self.BR
         
         #Mphi  = self.alphi/(bh.GCF * Mi/bh.GeV_in_g) # Scalar mass, fixed from the gravitational coupling alpha = G * MPBH * Mphi
         #self.M1 = (1. - 0.025)*0.5*Mphi
-        Mphi = 2.*self.M1/(1. - 0.025)
+        Mphi = 2.05*self.M1#/(1. - 0.025)
         
         self.M2 = 10.*self.M1
         self.M3 = 100.*self.M1
@@ -583,7 +589,7 @@ class EtaB_PBH_SR(ulysses.ULSBase):
             y0 = [Mi, asi, rRadi, rPBHi, Ti, N1RTi, N1RBpi, N1RBsi, N1RSi, NphiSi, NBLi] # Initial condition
 
             # Solving Equations
-            solFBE = solve_ivp(lambda t, z: self.RHS(t, z, eps, np.real(ngam), xilog10, Mphi, g, self.fG_SR_),
+            solFBE = solve_ivp(lambda t, z: self.RHS(t, z, eps, np.real(ngam), xilog10, Mphi, g, self.fG_SR_, BR),
                                [0., xflog10], y0, method='BDF', events=StopM, rtol=1.e-7, atol=1.e-10)
 
             assert solFBE.t[-1] > 0., colored('Solution going backwards...', 'red')
@@ -650,7 +656,7 @@ class EtaB_PBH_SR(ulysses.ULSBase):
             y0_aBE = [RadBE[-1], TBE[-1], N1RTBE[-1], N1RBpBE[-1],  N1RBsBE[-1], N1RSBE[-1], NphSBE[-1], NBLBE[-1]] 
             
             # Solving Equations
-            solFBE_aBE = solve_ivp(lambda t, z: self.RHS_aBE(t, z, eps, np.real(ngam), rPBHi/(Min/bh.GeV_in_g), np.real(Min), asin, Mphi, g),
+            solFBE_aBE = solve_ivp(lambda t, z: self.RHS_aBE(t, z, eps, np.real(ngam), rPBHi/(Min/bh.GeV_in_g), np.real(Min), asin, Mphi, g, BR),
                                    [xflog10, xzmax], y0_aBE, method='BDF', rtol=1.e-5, atol=1.e-10)
 
             npaf = solFBE_aBE.t.shape[0] # Dimension of solution array from Eqs solution
