@@ -16,7 +16,7 @@ t13 8.57
 t23 49.2
 MPBHi 1.0
 aPBHi 0.999
-bPBHi -4.0
+bPBHi -3.0
 alphi 0.2
-log_g -3.
-BR    0.0 1.0
+log_g -5.
+BR    0.95
