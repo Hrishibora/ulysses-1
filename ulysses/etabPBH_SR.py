@@ -113,7 +113,7 @@ def FBEqs(x, v, ngam, M1, M2, M3, Mphi, eps, d1, w1, N1Req, dPBH1_prim, dPBH1_se
     
     # Universe Evolution
     drRADdx  = - (FSM/FT) * (dMrad_GeVdx/M_GeV) * a * rPBH  + 2.*(BR_SM*GphiBH/H) * a * rphiBH + 2.*(BR_SM*Gphi/H) * a * (Mphi*NphiS*nPBH)
-    # Additional term includes scalar decay into SM radiation
+    # Additional term includes scalar decay from evaporation and SR into SM radiation
     drPBHdx  = + (dM_GeVdx/M_GeV) * rPBH
     dTdx     = - (Tp/Del) * (1.0 - (bh.gstarS(Tp)/bh.gstar(Tp))*(drRADdx/(4.*rRAD)))
 
@@ -157,7 +157,7 @@ def FBEqs(x, v, ngam, M1, M2, M3, Mphi, eps, d1, w1, N1Req, dPBH1_prim, dPBH1_se
 #    Equations after evaporation   #
 #----------------------------------#
 
-def FBEqs_aBE(x, v, ngam, M1,M2,M3, Mphi, eps, d1, w1, N1Req, nPBHi, dPBH1_prim, dPBH1_sec, dSR1, WashDL2, Gphi, pphi, BR_RH, x_ev):
+def FBEqs_aBE(x, v, ngam, M1,M2,M3, Mphi, eps, d1, w1, N1Req, nPBHi, dPBH1_prim, dPBH1_sec, dSR1, WashDL2, Gphi, pphi, BR_RH, x_ev, TBHi):
 
     rRAD  = v[0] # Radiation energy density
     Tp    = v[1] # Plasma Temperature
@@ -185,14 +185,14 @@ def FBEqs_aBE(x, v, ngam, M1,M2,M3, Mphi, eps, d1, w1, N1Req, nPBHi, dPBH1_prim,
 
     BR_SM = 1. - BR_RH
 
-    zphi = Mphi/TBH
+    zphi = Mphi/TBHi
 
     from ulysses.ulsbase import my_kn2, my_kn1
     
     pphi *= 10.**(x_ev - x)             # Average momentum of phi particles from evaporation, factor included due to redshift
     Ephi  = sqrt(Mphi**2  + pphi**2)
 
-    if NphIB >= 0.: GphiBH = min([Gphi * Mphi/Ephi, 1e3*H]) # boosted phi width (saturated at 10^3 H in order to avoid stiffness)
+    if NphiB >= 0.: GphiBH = min([Gphi * Mphi/Ephi, 1e3*H]) # boosted phi width (saturated at 10^3 H in order to avoid stiffness)
     else: GphiBH = 0.
     
     rphiBH = Ephi*NphiB*ngam # Mediator Energy density
@@ -540,7 +540,7 @@ class EtaB_PBH_SR(ulysses.ULSBase):
         WashDL2 = gD2/nleq
 
         return FBEqs_aBE(x, y0, ngam, self.M1,self.M2,self.M3, Mphi, eps, self._d1, self._w1, self._n1eq,
-                         nPBHi,  self._dPBH1_prim, self._dPBH1_sec, self._dSR1, np.real(WashDL2), Gam_phi, pphi, BR_RH, x_ev)
+                         nPBHi,  self._dPBH1_prim, self._dPBH1_sec, self._dSR1, np.real(WashDL2), Gam_phi, pphi, BR, x_ev, TBH)
 
     #******************************************************#
     #                     Main Program                     #
@@ -675,7 +675,7 @@ class EtaB_PBH_SR(ulysses.ULSBase):
 
             # Solving Equations
             solFBE = solve_ivp(lambda t, z: self.RHS(t, z, eps, np.real(ngam), xilog10, Mphi, g, self.fG_SR_, p_phi, BR),
-                               [0., xflog10], y0, method='BDF', events=StopM, rtol=1.e-7, atol=1.e-10)
+                               [0., xflog10], y0, method='BDF', events=StopM, rtol=1.e-8, atol=1.e-10)
 
             assert solFBE.t[-1] > 0., colored('Solution going backwards...', 'red')
 
